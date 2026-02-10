@@ -1,0 +1,23 @@
+<h2>Lista de Funcionários</h2>
+
+<table border="1" cellpadding="8">
+  <thead>
+    <tr>
+      <th>Nome</th>
+      <th>Email</th>
+      <th>Documento</th>
+      <th>Admissão</th>
+      <th>Ativo</th>
+    </tr>
+  </thead>
+
+  <tbody>
+    <tr *ngFor="let e of employees">
+      <td>{{ e.fullName }}</td>
+      <td>{{ e.email }}</td>
+      <td>{{ e.document }}</td>
+      <td>{{ e.hireDate | date }}</td>
+      <td>{{ e.isActive ? 'Sim' : 'Não' }}</td>
+    </tr>
+  </tbody>
+</table>
