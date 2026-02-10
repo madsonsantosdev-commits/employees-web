@@ -1,23 +1,236 @@
-<h2>Lista de Funcionários</h2>
+<div class="page">
+  <div class="header">
+    <div>
+      <h2>Funcionarios</h2>
+      <p class="subtitle">Lista de funcionarios cadastrados no sistema.</p>
+    </div>
 
-<table border="1" cellpadding="8">
-  <thead>
-    <tr>
-      <th>Nome</th>
-      <th>Email</th>
-      <th>Documento</th>
-      <th>Admissão</th>
-      <th>Ativo</th>
-    </tr>
-  </thead>
+    <div class="actions">
+      <button class="btn" (click)="load()" [disabled]="isLoading">
+        {{ isLoading ? 'Atualizando...' : 'Atualizar' }}
+      </button>
 
-  <tbody>
-    <tr *ngFor="let e of employees">
-      <td>{{ e.fullName }}</td>
-      <td>{{ e.email }}</td>
-      <td>{{ e.document }}</td>
-      <td>{{ e.hireDate | date }}</td>
-      <td>{{ e.isActive ? 'Sim' : 'Não' }}</td>
-    </tr>
-  </tbody>
-</table>
+      <button class="btn primary" (click)="openCreate()" [disabled]="isLoading">
+        Novo funcionario
+      </button>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="card filters">
+    <div class="filters-row">
+      <label class="field">
+        <span>Search</span>
+        <input
+          type="text"
+          placeholder="Nome, email ou documento"
+          [(ngModel)]="searchTerm"
+          (input)="applyFilter()"
+        />
+      </label>
+
+      <label class="field">
+        <span>Page</span>
+        <input type="number" min="1" placeholder="1" disabled />
+      </label>
+
+      <label class="field">
+        <span>PageSize</span>
+        <input type="number" min="1" placeholder="10" disabled />
+      </label>
+
+      <button class="btn" (click)="applyFilter()" [disabled]="isLoading || employeesAll.length === 0">
+        Buscar
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="card" *ngIf="isLoading">
+    <div class="loading">
+      <span class="spinner"></span>
+      <span>Carregando funcionarios...</span>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div class="card error" *ngIf="!isLoading && errorMessage">
+    <div class="error-content">
+      <strong>Ops!</strong>
+      <p>{{ errorMessage }}</p>
+      <button class="btn" (click)="load()">Tentar novamente</button>
+    </div>
+  </div>
+
+  <!-- Empty -->
+  <div class="card" *ngIf="!isLoading && !errorMessage && employees.length === 0">
+    <div class="empty">
+      <h3>Nenhum funcionario cadastrado</h3>
+      <p>Cadastre o primeiro funcionario para comecar.</p>
+      <button class="btn primary" (click)="openCreate()">Cadastrar funcionario</button>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="card" *ngIf="!isLoading && !errorMessage && employees.length > 0">
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Email</th>
+            <th>Documento</th>
+            <th>Admissao</th>
+            <th>Status</th>
+            <th class="col-actions">Acoes</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr *ngFor="let e of employees; trackBy: trackById">
+            <td class="name">{{ e.fullName }}</td>
+            <td>{{ e.email }}</td>
+            <td>{{ e.document }}</td>
+            <td>{{ e.hireDate | date:'dd/MM/yyyy' }}</td>
+            <td>
+              <span class="badge" [class.badge-ok]="e.isActive" [class.badge-off]="!e.isActive">
+                {{ e.isActive ? 'Ativo' : 'Inativo' }}
+              </span>
+            </td>
+            <td class="col-actions">
+              <button class="link" (click)="openEdit(e)">Editar</button>
+              <button class="link danger" disabled>Excluir</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== CREATE MODAL ===================== -->
+<div class="backdrop" *ngIf="isCreateOpen" (click)="closeCreate()"></div>
+
+<div class="modal" *ngIf="isCreateOpen" role="dialog" aria-modal="true">
+  <div class="modal-header">
+    <h3>Novo funcionario</h3>
+    <button class="icon-btn" (click)="closeCreate()" [disabled]="isCreating">✕</button>
+  </div>
+
+  <form class="modal-body" [formGroup]="createForm" (ngSubmit)="submitCreate()">
+    <div class="grid">
+      <div class="field">
+        <label>Nome completo</label>
+        <input type="text" formControlName="fullName" placeholder="Ex: Madson Santos" />
+        <small class="error-text" *ngIf="createForm.controls.fullName.touched && createForm.controls.fullName.invalid">
+          Informe um nome valido (min. 3 caracteres).
+        </small>
+      </div>
+
+      <div class="field">
+        <label>Documento</label>
+        <input type="text" formControlName="document" placeholder="CPF/CNPJ/ID" />
+        <small class="error-text" *ngIf="createForm.controls.document.touched && createForm.controls.document.invalid">
+          Informe um documento valido.
+        </small>
+      </div>
+
+      <div class="field">
+        <label>Email</label>
+        <input type="email" formControlName="email" placeholder="nome@empresa.com" />
+        <small class="error-text" *ngIf="createForm.controls.email.touched && createForm.controls.email.invalid">
+          Informe um email valido.
+        </small>
+      </div>
+
+      <div class="field">
+        <label>Data de admissao</label>
+        <input type="date" formControlName="hireDate" />
+        <small class="error-text" *ngIf="createForm.controls.hireDate.touched && createForm.controls.hireDate.invalid">
+          Informe a data de admissao.
+        </small>
+      </div>
+    </div>
+
+    <div class="api-error" *ngIf="createError">
+      {{ createError }}
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn" (click)="closeCreate()" [disabled]="isCreating">
+        Cancelar
+      </button>
+
+      <button type="submit" class="btn primary" [disabled]="isCreating">
+        {{ isCreating ? 'Salvando...' : 'Cadastrar' }}
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- ===================== EDIT MODAL ===================== -->
+<div class="backdrop" *ngIf="isEditOpen" (click)="closeEdit()"></div>
+
+<div class="modal" *ngIf="isEditOpen" role="dialog" aria-modal="true">
+  <div class="modal-header">
+    <h3>Editar funcionario</h3>
+    <button class="icon-btn" (click)="closeEdit()" [disabled]="isUpdating">✕</button>
+  </div>
+
+  <form class="modal-body" [formGroup]="editForm" (ngSubmit)="submitEdit()">
+    <div class="grid">
+      <div class="field">
+        <label>Nome completo</label>
+        <input type="text" formControlName="fullName" />
+        <small class="error-text" *ngIf="editForm.controls.fullName.touched && editForm.controls.fullName.invalid">
+          Informe um nome valido (min. 3 caracteres).
+        </small>
+      </div>
+
+      <div class="field">
+        <label>Documento</label>
+        <input type="text" formControlName="document" />
+        <small class="error-text" *ngIf="editForm.controls.document.touched && editForm.controls.document.invalid">
+          Informe um documento valido.
+        </small>
+      </div>
+
+      <div class="field">
+        <label>Email</label>
+        <input type="email" formControlName="email" />
+        <small class="error-text" *ngIf="editForm.controls.email.touched && editForm.controls.email.invalid">
+          Informe um email valido.
+        </small>
+      </div>
+
+      <div class="field">
+        <label>Data de admissao</label>
+        <input type="date" formControlName="hireDate" />
+        <small class="error-text" *ngIf="editForm.controls.hireDate.touched && editForm.controls.hireDate.invalid">
+          Informe a data de admissao.
+        </small>
+      </div>
+
+      <div class="field checkbox">
+        <label>
+          <input type="checkbox" formControlName="isActive" />
+          Ativo
+        </label>
+      </div>
+    </div>
+
+    <div class="api-error" *ngIf="editError">
+      {{ editError }}
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn" (click)="closeEdit()" [disabled]="isUpdating">
+        Cancelar
+      </button>
+
+      <button type="submit" class="btn primary" [disabled]="isUpdating">
+        {{ isUpdating ? 'Salvando...' : 'Salvar alteracoes' }}
+      </button>
+    </div>
+  </form>
+</div>
